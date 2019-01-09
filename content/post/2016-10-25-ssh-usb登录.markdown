@@ -1,0 +1,107 @@
+---
+title: "通过数据线直接ssh登陆到iOS设备"
+date: 2016-05-01
+description: ""
+coverImage: "https://blog-1252872972.cos.ap-chengdu.myqcloud.com/post-bg-ssh-usb0.jpg"
+thumbnailImagePosition: left
+metaAlignment: center
+coments: true
+categories:
+- iOS
+tags: 
+- 效率
+- iOS逆向
+- iOS
+
+---
+小黄书《iOS逆向工程》介绍的使用usb连接 iOS设备的方式是使用 usbmuxd，但是这个方式还是不够快速便捷，本文介绍了几种更方便的连接思路。
+
+<!--more-->
+
+## 更快的连接方式
+
+usbmuxd 这个三方库也可以很快的通过usb线ssh连接iOS设备，还有更便捷的方法可以做到。不用输入tcprelay.py的路径，连接手机，快速登录。即守护进程开机运行，直接转发ssh的默认端口号22到其他端口，并加载[intl程序](https://code.google.com/archive/p/iphonetunnel-usbmuxconnectbyport/downloads)监听连接。
+
+title: "Welcome to Tranquilpeak 0.4.4-BETA"
+date: 2015-06-15
+categories:
+- tranquilpeak
+- releases
+  tags:
+- hexo theme
+- responsive
+- gravatar
+- disqus
+- google analytics
+  keywords:
+- disqus
+- google
+- gravatar
+  autoThumbnailImage: false
+  thumbnailImagePosition: "top"
+  thumbnailImage: //d1u9biwaxjngwg.cloudfront.net/welcome-to-tranquilpeak/city-750.jpg
+  coverImage: //d1u9biwaxjngwg.cloudfront.net/welcome-to-tranquilpeak/city.jpg
+  metaAlignment: center
+
+## 自动运行监听程序
+在 ~/Library/Application Support/ 目录下新建文件夹，放置监听程序(itnl和libmd.dylib)
+然后在~/Library/LaunchAgents 下放置一个plist文件(我的起名为com.sumbrilliance.tcprelay.plist)，格式按照如下格式：
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.sumbrilliance.tcprelay</string>
+	<key>KeepAlive</key>
+	<dict>
+		<key>NetworkState</key>
+		<true/>
+	</dict>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/USER/Library/Application Support/usbmuxd/itnl</string>
+		<string>--iport</string>
+		<string>22</string>
+		<string>--lport</string>
+		<string>2222</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+</dict>
+</plist>
+```
+
+注意把里面的/Users/USER/Library/Application Support/usbmuxd/itnl 名字换成你自己放置监听程序的绝对路径
+然后修改这个plist文件的权限，使其能在用户登录时自动加载，终端命令：
+>chmod 0644 ~/Library/LaunchAgents/com.sumbrilliance.tcprelay.plist
+
+~/Library/LaunchAgents 下的plist文件是在用户登录时加载的，如果不想重启电脑，马上加载，请终端输入：
+>launchctl load ~/Library/LaunchAgents/com.sumbrilliance.tcprelay.plist
+
+现在可以通过不输入ip直接连数据线ssh登录iOS设备了:
+> ssh -p 2222 mobile@localhost
+
+## 快一些
+上诉命令输入之后仍然需要输入登录密码，我们把本机公玥放到目标主机（iOS设备）上，来跳过这个验证过程
+### 生成公私玥
+终端命令:
+> ssh-keygen -t rsa
+
+几次回车之后会在~/.ssh/ 下生成id_rsa 和 id_rsa.pub，后者则为我们需要的公玥
+打开这个公玥，将内容复制到iOS设备的 authorized_keys 文件(此文件在iOS设备的/var/root/.ssh/目录下,这个文件保存着连接过的主机的公钥，如果没有，请新建一个，无文件后缀)中。
+这样，这台电脑再登录这台iOS设备就不再需要输入密码了。
+
+## 更快一些
+尽管登录命令缩短到了
+> ssh -p 2222 root@localhost
+
+也不再需要密码，但还是每次输入root@localhost仍然不够方便，那么可以通过设置环境变量的方式缩短输入，命令：
+> alias i5c="ssh -p 2222 root@localhost"
+
+将此命令加到 ~/.zshrc (本人使用的是 oh-my-zsh，如果你没有装这个插件，将没有.zshrc文件，请在 ~/.bash_profile文件添加此命令，同样为开机自动加载)文件中，使其开机自动执行，以后就可以使用 i5c 来代替这一长串的命令。
+然后命令就缩短到了
+> i5c 
+
+快到飞起。

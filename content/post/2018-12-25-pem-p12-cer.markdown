@@ -1,0 +1,42 @@
+---
+layout:     post
+title:      ".pem、 .p12、cer 等文件的区别"
+subtitle:   ""
+date:       2018-12-25 22:30:00
+author:     "sumbrilliance"
+coverImage: //d1u9biwaxjngwg.cloudfront.net/video-integration-showcase/peak-140.jpg
+thumbnailImage: //d1u9biwaxjngwg.cloudfront.net/video-integration-showcase/peak-140.jpg
+thumbnailImagePosition: "left"
+categories:
+- 基础
+tags:
+    - 其他
+    - 证书
+---
+本文根据SO上面的一个的回答，对CSR 、pem、crt、cer等文件格式进行解释。
+
+<!--more-->
+
+
+
+## - **.csr** 
+
+   .csr 是证书请求文件，是由 RFC 2986定义的PKCS10格式，包含部分/全部的请求证书的信息，比如，主题, 机构，国家等，并且包含了请求证书的公玥，这些被CA中心签名后返回一张证书。返回的证书是公钥证书（只包含公玥不含私钥）
+## - **.pem**
+   .pem 是一种容器格式，可能仅包含公钥证书，也可以包含完整的证书链（包括公玥，私钥，和根证书）。也可能用来编码 CSR文件。
+## - **.key** 
+  .key 其实就是一个pem格式只包含私玥的文件，.key 作为文件名只是作为一个明显的别名。
+## - **.pkcs12 .pfx .p12** 
+  pkcs即 RSA定义的 公玥密码学( Public-Key Cryptography Standards)标准，有多个标准 pkcs12只是其一，是描述个人信息交换语法标准。 有的文件直接使用其作为文件后缀名。这种文件包含公钥和私玥证书对，跟pem文件不同的是，它的内容是完全加密的。 用openssl可以把其转换成包含公玥和私玥的 .pem 文件。命令：
+  `openssl pkcs12 -in file-to-convert.p12 -out converted-file.pem -nodes`
+
+## - **.der** 
+   其实der不是一种文件格式。der 是ASN.1 众多编码方案中的一个，使用der编码方案编码的pem文件。der 编码是使用二进制编码，一般pem文件使用的是base64进行编码，所以完全可以把der编码的文件转换成pem文件，命令：
+  `openssl x509 -inform der -in to-convert.der -out converted.pem`
+  使用der编码的pem文件，后缀名可以为.der，也可以为以下格式：
+## - **.cert .cer .crt**
+  pem或者der编码格式的证书文件，这些文件后缀名都会被windows 资源管理器认为是证书文件。有趣的是,  .pem 反而不会被认为是证书文件。
+
+参考
+
+[stackoverflow回答](https://serverfault.com/questions/9708/what-is-a-pem-file-and-how-does-it-differ-from-other-openssl-generated-key-file)

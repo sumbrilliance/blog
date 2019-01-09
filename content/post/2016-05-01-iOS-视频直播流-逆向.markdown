@@ -1,0 +1,146 @@
+---
+title: "一次视频直播客户端逆向开发"
+date: 2016-05-01
+description: "视频直播流"
+coverImage: "https://blog-1252872972.cos.ap-chengdu.myqcloud.com/post-bg-iOSRe-1.jpg"
+thumbnailImage: "https://blog-1252872972.cos.ap-chengdu.myqcloud.com/post-bg-iOSRe-1.jpg"
+thumbnailImagePosition: "left"
+categories:
+- iOS
+tags: 
+- 逆向
+
+---
+本文原计划是一个系列中的首篇，结果懒癌一犯，无限跳票，但是毕竟是废了心血写的，此次迁移，也做了保留，如果能对有些朋友有所参考，那就再好不过。
+
+本文介绍的主要是逆向的第一步，对想要逆向的ipa文件砸壳（去掉外层的加密保护）。
+
+<!--more-->
+
+## 一、通过数据线连接手机
+
+为了速度更快些，我们就不使用wifi连接了，直接连数据线。使用wifi连接的直接跳到第二部分。
+
+### 1.1 先通过usbmux转发端口
+
+终端命令：
+
+> ~/ ~/reios/tools/tcprelay.py -t 22:2222 // 将mac2222端口转发到iOS22端口，当然只要不与现有端口冲突，端口号可以自己定
+
+看到如下状态即为正常创建
+
+```
+Forwarding local port 2222 to remote port 22
+Incoming connection to 2222
+Waiting for devices...
+Connecting to device <MuxDevice: ID 73 ProdID 0x12a8 Serial '5cba8c45a93df1b03575f15ab3119a2621627578' Location 0x14100000>
+Connection established, relaying data
+```
+
+### 1.2 登录到手机端超级用户
+使用OpenSSH（如未安装，请先到Cydia安装）登录到手机，终端命令：
+```
+ ~/ ssh root@localhost -p 2222 // root为超级用户，因为之前指定了端口号为2222，所以使用2222端口登录到手机端
+```
+
+登录成功后应当显示为
+
+>sum-5c:~ root#   // sum-5c是我的手机名，如果登录的是普通用户，则显示为sum-5c:~ mobile#
+
+## 二、 将dumpdecrypted.dylib拷贝到APP目录。
+获取app的目录，可以通过手机端（比如ifile）查找，可以通过mac端（比如iFunBox）查找，但是这些方法效率不高。咱们用另一种方式查找。
+iOS开发的时候我们知道，可以通过NSFileManager这个类来获取文件路径。那么我们可以采用cycript嵌入代码的方式，获取文件路径。
+
+### 2.1 获取进程名
+我们使用ps -e 命令获取当前运行的所有进程名。ps命令由Cycript插件提供，当然也可以通过其他方式安装，比如adv-cmds，请自行到Cydia搜索。
+终端命令：
+
+>sum-5c:~ root# ps -e
+
+之后会打印出可执行文件的路径，类似如下
+
+```
+ PID TTY           TIME CMD
+    1 ??         1:33.35 /sbin/launchd
+   ...
+ 3551 ??         0:00.90 /usr/libexec/ptpd -t usb
+ 3576 ??         0:17.46 /var/mobile/Containers/Bundle/Application/CCDE3FE7-59C3-43DC-AB91-6245AEF3C3AC/inke.app/inke
+ 3759 ??         0:00.22 sshd: root@ttys000
+ 
+   ...
+ 3761 ttys000    0:00.03 -sh
+ 3816 ttys000    0:00.01 ps -e
+```
+
+inke.app中的inke执行文件就是我们想要砸壳的对象，由此我们获得了可执行文件的所在，一会就要对这个文件砸壳。
+
+### 2.2 cycript注入
+cycript注入到目标进程中。
+终端命令：
+
+>sum-5c:~ root# cyript -p inke
+
+### 2.3 获取文件路径
+```
+sum-5c:~ root# cycript -p inke
+cy# [[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask][0]
+#"file:///var/mobile/Containers/Data/Application/337C5DFD-5BDA-4B51-B7E7-1EE1922F158D/Documents/"
+cy#
+```
+
+OK，我们得到了app的Documents文件路径。
+
+### 2.4 使用openSSH拷贝砸壳动态库到目标文件夹
+将文件从电脑拷贝到app的document目录下
+终端命令(注意此时是在mac用户下操作，而非手机root用户)：
+
+```
+ ~/ scp ~/reios/Code/dumpdecrypted/dumpdecrypted.dylib root@192.168.199.208:/var/mobile/Containers/Data/Application/337C5DFD-5BDA-4B51-B7E7-1EE1922F158D/Documents/
+dumpdecrypted.dylib                                                                                                          100%  193KB 192.9KB/s   00:00
+```
+
+## 三、砸壳
+一切准备就绪，我们开始砸壳。
+砸壳是通过插入动态库达到砸壳目的的。命令是DYLD_INSERT_LIBRARIES=[砸壳所用的动态库],名字很直观对不对？
+砸壳只需要一行命令
+
+```
+/var/mobile/Containers/Data/Application/337C5DFD-5BDA-4B51-B7E7-1EE1922F158D/Documents root# DYLD_INSERT_LIBRARIES=dumpdecrypted.dylib /var/mobile/Containers/Bundle/Application/CCDE3FE7-59C3-43DC-AB91-6245AEF3C3AC/inke.app/inke
+```
+
+你可能注意到了，我们是在app的document下操作的，这是为了生成的砸壳后的文件在document目录，当然你在其他目录下也可以比如这样：
+
+```
+DYLD_INSERT_LIBRARIES=/var/mobile/Containers/Data/Application/337C5DFD-5BDA-4B51-B7E7-1EE1922F158D/Documents/dumpdecrypted.dylib /var/mobile/Containers/Bundle/Application/CCDE3FE7-59C3-43DC-AB91-6245AEF3C3AC/inke.app/inke
+```
+
+这样的话生成的inke.decrypted会在root目录下。
+
+好了回车执行，正常情况下显示如下：
+
+```
+sum-5c:/var/mobile/Containers/Data/Application/337C5DFD-5BDA-4B51-B7E7-1EE1922F158D/Documents root# DYLD_INSERT_LIBRARIES=dumpdecrypted.dylib /var/mobile/Containers/Bundle/Application/CCDE3FE7-59C3-43DC-AB91-6245AEF3C3AC/inke.app/inke
+mach-o decryption dumper
+
+DISCLAIMER: This tool is only meant for security research purposes, not for application crackers.
+
+[+] detected 32bit ARM binary in memory.
+[+] offset to cryptid found: @0x7da4c(from 0x7d000) = a4c
+[+] Found encrypted data at address 00004000 of length 11911168 bytes - type 1.
+[+] Opening /private/var/mobile/Containers/Bundle/Application/CCDE3FE7-59C3-43DC-AB91-6245AEF3C3AC/inke.app/inke for reading.
+[+] Reading header
+[+] Detecting header type
+[+] Executable is a FAT image - searching for right architecture
+[+] Correct arch is at offset 16384 in the file
+[+] Opening inke.decrypted for writing.
+[+] Copying the not encrypted start of the file
+[+] Dumping the decrypted data into the file
+[+] Copying the not encrypted remainder of the file
+[+] Setting the LC_ENCRYPTION_INFO->cryptid to 0 at offset 4a4c
+[+] Closing original file
+[+] Closing dump file
+sum-5c:/var/mobile/Containers/Data/Application/337C5DFD-5BDA-4B51-B7E7-1EE1922F158D/Documents root# 
+```
+
+砸壳成功！将这个文件拷贝到电脑备用吧！
+下一篇将对可执行文件class-dump，和ida分析。

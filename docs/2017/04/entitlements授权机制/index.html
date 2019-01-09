@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="generator" content="Hugo 0.53 with theme Tranquilpeak 0.4.3-SNAPSHOT">
+<meta name="author" content="sumbrilliance">
+<meta name="keywords" content="">
+<meta name="description" content="在对ipa重签名的时候，你可能会疑惑，为什么可以用别的证书重签之后，ipa就可以安装，又为什么在重签的时候需要加入 embedded.mobileprovision 文件，重签失败出现的闪退又是为什么。那么也许你需要深入了解 entitlements 的验证机制。">
+
+
+<meta property="og:description" content="在对ipa重签名的时候，你可能会疑惑，为什么可以用别的证书重签之后，ipa就可以安装，又为什么在重签的时候需要加入 embedded.mobileprovision 文件，重签失败出现的闪退又是为什么。那么也许你需要深入了解 entitlements 的验证机制。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="entitlements授权机制">
+<meta name="twitter:title" content="entitlements授权机制">
+<meta property="og:url" content="https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+<meta property="twitter:url" content="https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+<meta property="og:site_name" content="夏四的博客">
+<meta property="og:description" content="在对ipa重签名的时候，你可能会疑惑，为什么可以用别的证书重签之后，ipa就可以安装，又为什么在重签的时候需要加入 embedded.mobileprovision 文件，重签失败出现的闪退又是为什么。那么也许你需要深入了解 entitlements 的验证机制。">
+<meta name="twitter:description" content="在对ipa重签名的时候，你可能会疑惑，为什么可以用别的证书重签之后，ipa就可以安装，又为什么在重签的时候需要加入 embedded.mobileprovision 文件，重签失败出现的闪退又是为什么。那么也许你需要深入了解 entitlements 的验证机制。">
+<meta property="og:locale" content="en-us">
+
+  
+    <meta property="article:published_time" content="2017-04-18T00:00:00">
+  
+  
+    <meta property="article:modified_time" content="2017-04-18T00:00:00">
+  
+  
+  
+    
+      <meta property="article:section" content="iOS">
+    
+  
+  
+    
+      <meta property="article:tag" content="iOS">
+    
+      <meta property="article:tag" content="签名">
+    
+      <meta property="article:tag" content="entitlements">
+    
+  
+
+
+<meta name="twitter:card" content="summary">
+
+  <meta name="twitter:site" content="@xgh_0803">
+
+
+  <meta name="twitter:creator" content="@xgh_0803">
+
+
+
+
+
+
+  <meta property="og:image" content="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/about-bg.jpg">
+  <meta property="twitter:image" content="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/about-bg.jpg">
+
+
+  <meta property="og:image" content="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/about-bg.jpg">
+  <meta property="twitter:image" content="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/about-bg.jpg">
+
+
+
+
+  <meta property="og:image" content="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/avatar-face.jpg">
+  <meta property="twitter:image" content="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/avatar-face.jpg">
+
+
+    <title>entitlements授权机制</title>
+
+    <link rel="icon" href="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/avatar-face.jpg">
+    
+
+    
+
+    <link rel="canonical" href="https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.css" integrity="sha256-vuXZ9LGmmwtjqFX1F+EKin1ThZMub58gKULUyf0qECk=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" integrity="sha256-SEa4XYAHihTcEP1f5gARTB2K26Uk8PsndQYHQC1f4jU=" crossorigin="anonymous" />
+    
+    
+    <link rel="stylesheet" href="https://sumbrilliance.github.io/css/style-nnm2spxvve8onlujjlegkkytaehyadd4ksxc1hyzzq9a2wvtrgbljqyulomn.min.css" />
+    
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="4">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="https://sumbrilliance.github.io/">夏四的博客</a>
+  </div>
+  
+    
+      <a class="header-right-picture "
+         href="https://sumbrilliance.github.io/#about">
+    
+    
+    
+      
+        <img class="header-picture" src="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/avatar-face.jpg" alt="Author&#39;s picture" />
+      
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="4">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="https://sumbrilliance.github.io/#about">
+          <img class="sidebar-profile-picture" src="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/avatar-face.jpg" alt="Author&#39;s picture" />
+        </a>
+        <h4 class="sidebar-profile-name">sumbrilliance</h4>
+        
+          <h5 class="sidebar-profile-bio">以工匠的态度写代码</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://sumbrilliance.github.io/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+      
+      <span class="sidebar-button-desc">Home</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://sumbrilliance.github.io/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://sumbrilliance.github.io/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://sumbrilliance.github.io/archives">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+      
+      <span class="sidebar-button-desc">Archives</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://sumbrilliance.github.io/#about">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/sumbrilliance" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://sumbrilliance.github.io/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              "
+       style="background-image:url('https://blog-1252872972.cos.ap-chengdu.myqcloud.com/about-bg.jpg')"
+       data-behavior="4">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      entitlements授权机制
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2017-04-18T00:00:00Z">
+        
+  April 18, 2017
+
+      </time>
+    
+    
+  
+  
+    <span>in</span>
+    
+      <a class="category-link" href="https://sumbrilliance.github.io/categories/ios">iOS</a>
+    
+  
+
+  </div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="4"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>在对ipa重签名的时候，你可能会疑惑，为什么可以用别的证书重签之后，ipa就可以安装，又为什么在重签的时候需要加入 embedded.mobileprovision 文件，重签失败出现的闪退又是为什么。那么也许你需要深入了解 entitlements 的验证机制。</p>
+
+<p>原来的素材图放在七牛云可能因为很久没有登上去处理上面的图片，无法查看无法下载，也是坑。中间又经历过重装系统，原图也丢失了，有兴趣的朋友可以通过下文流程图出处找</p>
+
+<h2 id="一-entitlements-验证流程">一、entitlements 验证流程</h2>
+
+<h3 id="1-1-entitlements流程图">1.1 entitlements流程图</h3>
+
+<p><img src="http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-0.png" alt="流程图" />
+如图所示，entitlements.plist和pp文件都是entitlements这一授权机制的体现，两者彼此分工又互相配合。前者主管app在沙盒中的权限，而pp文件既管理沙盒权限，也管理允许运行的设备号，验证签名的证书是否有效等等。
+<img src="http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-1.png" alt="启动验证流程" /></p>
+
+<h3 id="1-2-app的entitlements会在程序安装和启动时进行验证">1.2 app的entitlements会在程序安装和启动时进行验证</h3>
+
+<p>分为两步：</p>
+
+<p><strong>1.2.1 There are no unexpected or misconfigured entitlements</strong>
+检查格式对不对，以及有没有正确配置。</p>
+
+<p><strong>1.2.2 That entitlements match across the app’s signature and the app’s embedded provisioning profile.</strong>
+拿entitlements去检查app内部的signature文件和pp文件中的权限声明是否匹配。
+如果验证不通过，<strong>无法安装/启动</strong>。</p>
+
+<h2 id="二-查看entitlements的方法">二、查看entitlements的方法</h2>
+
+<h3 id="2-1-直接查看">2.1 直接查看</h3>
+
+<p><img src="http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-2.png" alt="常看entitlements文件" />
+但是这个entitlements文件所列的权限不全，有些不会列出来。比如application-identifier,keychain-access-groups这些。</p>
+
+<h3 id="2-2-打包时查看">2.2 打包时查看。</h3>
+
+<p><img src="http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-4.png" alt="Archive时查看entitlements" />
+在这里可以看到我们将要打包的app的所有权限，我们可以检查是否有遗漏，比如说推送的权限，后台播放的权限。</p>
+
+<h3 id="2-3-codesign-命令行工具查看">2.3 codesign 命令行工具查看</h3>
+
+<blockquote>
+<p>codesign -d &ndash;entitlements :- YourApp.app</p>
+</blockquote>
+
+<p>也可简写为</p>
+
+<blockquote>
+<p>codesign -d &ndash;ent :- /path/to/the.app</p>
+</blockquote>
+
+<h3 id="2-4-ldid-命令行工具查看">2.4 ldid 命令行工具查看</h3>
+
+<blockquote>
+<p>ldid -e YourApp.app/YourApp</p>
+</blockquote>
+
+<h3 id="2-5-surcurity-命令行工具查看">2.5 surcurity 命令行工具查看</h3>
+
+<blockquote>
+<p>security cms -D -i /path/XXXXX.mobileprovision</p>
+</blockquote>
+
+<h3 id="2-6-进到xxx-app里面-用vim打开里面的embedded-mobileprovision-文件-往下翻到entitlements目录">2.6 进到xxx.app里面，用vim打开里面的embedded.mobileprovision，文件，往下翻到entitlements目录</h3>
+
+<p><img src="http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-3.png" alt="mobileprovision中的entitlments示意" /></p>
+
+<h2 id="三-生成entitlements-plist文件">三、生成entitlements.plist文件</h2>
+
+<p>这里介绍一个技巧快速生成entitlements.plist文件，使用codesign工具：
+&gt; codesign -d &ndash;entitlements :entitlements.plist /path/from/XXX.app</p>
+
+<p>会在当前文件夹生成和XXX.app权限一样的entitlements.plist文件</p>
+
+<h2 id="四-一些entitlements说明">四、一些entitlements说明</h2>
+
+<ul>
+<li><p>beta-reports-active
+Beta reports active is a key entitlement with no value. It exists on all App Store distribution provisioning profiles and determines that the app can be distributed through TestFlight.</p></li>
+
+<li><p>team-identifier
+Your Team ID, which is your team&rsquo;s unique 10-digit alpha/numeric value. This value is often used as the default App ID prefix. Certain features are only allowed across apps whose team-identifier value match, for example, Handoff, keychain and UIPasteboard sharing.</p></li>
+
+<li><p>get-task-allow
+The boolean value of get-task-allow determines whether Xcode&rsquo;s debugger can attach to the app.</p></li>
+
+<li><p>application-identifier
+The string value of application-identifier is of the format: <prefix>.<bundle_id> and it corresponds to your app&rsquo;s App ID. Often times the prefix is equal to the Team ID though it isn&rsquo;t always the case. In the provisioning profile, this value includes an asterisk if it is associated to a wildcard App ID. In either case, the application-identifier on an app&rsquo;s signature is always fully qualified to include the app&rsquo;s full bundle ID.</p></li>
+
+<li><p>keychain-access-groups
+This entitlement defines an array of strings corresponding to keychains you intend the app to have access to. Each string value in the array are of the format: <prefix>.<bundle_id>. By default, Xcode creates this entitlement for you a value equal to the application-identifier entitlement. All prefixes in this array of strings must match. For more information, see the SecItemAdd section of the Keychain Services Reference.</p></li>
+
+<li><p>push-notification
+The presence of this entitlement indicates that the app is enabled to receive push notifications. The value of this entitlement is either &ldquo;production&rdquo; or &ldquo;development&rdquo;, which refer to the live and sandbox push notification servers, respectively. For more information on troubleshooting push notifications.</p></li>
+</ul>
+
+<h2 id="一些注意的点">一些注意的点</h2>
+
+<p><strong>1.app上架会经过App Store的再次签名，所以embedded.mobileprovision文件只存在于你开发的时候那个.app中，从App Store下载下来的ipa里面的XXX.app中是没有这个文件的。</strong></p>
+
+<p><strong>2.越狱开发的时候，使用一些私有api，有些api是需要特殊的entitlements属性的，必须设置才能生效。</strong> 比如</p>
+
+<pre><code>&lt;key&gt;com.apple.locationd.authorizeapplications&lt;/key&gt;
+&lt;true/&gt;
+
+</code></pre>
+
+<p>是用来快速开关定位所依赖的entitlements，如果没有用此属性签名，定位开关的私有api将不会起效。
+而通常这些特殊entitlements是不公开的，所以用这些entitlements签名的app，将安装不上非越狱机(经本人测试确实不行，如果有其他黑魔法，可以让非越狱机使用这些依赖特殊entitlements的私有api，请告知笔者，谢谢！)</p>
+
+<p><a href="https://developer.apple.com/library/ios/technotes/tn2415/_index.html#//apple_ref/doc/uid/DTS40016427-CH1-OSVALIDATION">流程图出处</a>
+<a href="https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/TestingYouriOSApp/TestingYouriOSApp.html#//apple_ref/doc/uid/TP40012582-CH8-SW1">pp 验证流程图出处</a>
+<a href="http://objccn.io/issue-17-2/">代码签名探析</a></p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small">TAGGED IN</span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="https://sumbrilliance.github.io/tags/ios/">iOS</a>
+
+  <a class="tag tag--primary tag--small" href="https://sumbrilliance.github.io/tags/%E7%AD%BE%E5%90%8D/">签名</a>
+
+  <a class="tag tag--primary tag--small" href="https://sumbrilliance.github.io/tags/entitlements/">entitlements</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  
+      <nav >
+        <ul class="post-actions post-action-nav">
+          
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="https://sumbrilliance.github.io/2018/12/.pem-.p12cer-%E7%AD%89%E6%96%87%E4%BB%B6%E7%9A%84%E5%8C%BA%E5%88%AB/" data-tooltip=".pem、 .p12、cer 等文件的区别">
+              
+                  <i class="fa fa-angle-left"></i>
+                  <span class="hide-xs hide-sm text-small icon-ml">NEXT</span>
+                </a>
+            </li>
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="https://sumbrilliance.github.io/2016/05/%E4%B8%80%E6%AC%A1%E8%A7%86%E9%A2%91%E7%9B%B4%E6%92%AD%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%86%E5%90%91%E5%BC%80%E5%8F%91/" data-tooltip="一次视频直播客户端逆向开发">
+              
+                  <span class="hide-xs hide-sm text-small icon-mr">PREVIOUS</span>
+                  <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+          
+        </ul>
+      </nav>
+    <ul class="post-actions post-action-share" >
+      
+        <li class="post-action hide-lg hide-md hide-sm">
+          <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+            <i class="fa fa-share-alt"></i>
+          </a>
+        </li>
+        
+          <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+              <i class="fa fa-facebook-official"></i>
+            </a>
+          </li>
+        
+          <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+              <i class="fa fa-twitter"></i>
+            </a>
+          </li>
+        
+          <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+              <i class="fa fa-google-plus"></i>
+            </a>
+          </li>
+        
+      
+      
+        <li class="post-action">
+          <a class="post-action-btn btn btn--default" href="#disqus_thread">
+            <i class="fa fa-comment-o"></i>
+          </a>
+        </li>
+      
+      <li class="post-action">
+        
+          <a class="post-action-btn btn btn--default" href="#">
+        
+          <i class="fa fa-list"></i>
+        </a>
+      </li>
+    </ul>
+  
+</div>
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2019 sumbrilliance. All Rights Reserved
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+        <div class="post-actions-wrap">
+  
+      <nav >
+        <ul class="post-actions post-action-nav">
+          
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="https://sumbrilliance.github.io/2018/12/.pem-.p12cer-%E7%AD%89%E6%96%87%E4%BB%B6%E7%9A%84%E5%8C%BA%E5%88%AB/" data-tooltip=".pem、 .p12、cer 等文件的区别">
+              
+                  <i class="fa fa-angle-left"></i>
+                  <span class="hide-xs hide-sm text-small icon-ml">NEXT</span>
+                </a>
+            </li>
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="https://sumbrilliance.github.io/2016/05/%E4%B8%80%E6%AC%A1%E8%A7%86%E9%A2%91%E7%9B%B4%E6%92%AD%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%86%E5%90%91%E5%BC%80%E5%8F%91/" data-tooltip="一次视频直播客户端逆向开发">
+              
+                  <span class="hide-xs hide-sm text-small icon-mr">PREVIOUS</span>
+                  <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+          
+        </ul>
+      </nav>
+    <ul class="post-actions post-action-share" >
+      
+        <li class="post-action hide-lg hide-md hide-sm">
+          <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+            <i class="fa fa-share-alt"></i>
+          </a>
+        </li>
+        
+          <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+              <i class="fa fa-facebook-official"></i>
+            </a>
+          </li>
+        
+          <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+              <i class="fa fa-twitter"></i>
+            </a>
+          </li>
+        
+          <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+              <i class="fa fa-google-plus"></i>
+            </a>
+          </li>
+        
+      
+      
+        <li class="post-action">
+          <a class="post-action-btn btn btn--default" href="#disqus_thread">
+            <i class="fa fa-comment-o"></i>
+          </a>
+        </li>
+      
+      <li class="post-action">
+        
+          <a class="post-action-btn btn btn--default" href="#">
+        
+          <i class="fa fa-list"></i>
+        </a>
+      </li>
+    </ul>
+  
+</div>
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+  <i id="btn-close-shareoptions" class="fa fa-close"></i>
+  <ul class="share-options">
+    
+      <li class="share-option">
+        <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fsumbrilliance.github.io%2F2017%2F04%2Fentitlements%25E6%258E%2588%25E6%259D%2583%25E6%259C%25BA%25E5%2588%25B6%2F">
+          <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
+        </a>
+      </li>
+    
+      <li class="share-option">
+        <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https%3A%2F%2Fsumbrilliance.github.io%2F2017%2F04%2Fentitlements%25E6%258E%2588%25E6%259D%2583%25E6%259C%25BA%25E5%2588%25B6%2F">
+          <i class="fa fa-twitter"></i><span>Share on Twitter</span>
+        </a>
+      </li>
+    
+      <li class="share-option">
+        <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3A%2F%2Fsumbrilliance.github.io%2F2017%2F04%2Fentitlements%25E6%258E%2588%25E6%259D%2583%25E6%259C%25BA%25E5%2588%25B6%2F">
+          <i class="fa fa-google-plus"></i><span>Share on Google&#43;</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="https://blog-1252872972.cos.ap-chengdu.myqcloud.com/avatar-face.jpg" alt="Author&#39;s picture" />
+    
+    <h4 id="about-card-name">sumbrilliance</h4>
+    
+      <div id="about-card-bio">以工匠的态度写代码</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        全栈程序员
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        GuangDong
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="Search" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center">no post found</div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://sumbrilliance.github.io/2018/12/.pem-.p12cer-%E7%AD%89%E6%96%87%E4%BB%B6%E7%9A%84%E5%8C%BA%E5%88%AB/">
+                <h3 class="media-heading">.pem、 .p12、cer 等文件的区别</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Dec 12, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>本文根据SO上面的一个的回答，对CSR 、pem、crt、cer等文件格式进行解释。</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://sumbrilliance.github.io/2017/04/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6/">
+                <h3 class="media-heading">entitlements授权机制</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>在对ipa重签名的时候，你可能会疑惑，为什么可以用别的证书重签之后，ipa就可以安装，又为什么在重签的时候需要加入 embedded.mobileprovision 文件，重签失败出现的闪退又是为什么。那么也许你需要深入了解 entitlements 的验证机制。</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://sumbrilliance.github.io/2016/05/%E4%B8%80%E6%AC%A1%E8%A7%86%E9%A2%91%E7%9B%B4%E6%92%AD%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%86%E5%90%91%E5%BC%80%E5%8F%91/">
+                <h3 class="media-heading">一次视频直播客户端逆向开发</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>本文原计划是一个系列中的首篇，结果懒癌一犯，无限跳票，但是毕竟是废了心血写的，此次迁移，也做了保留，如果能对有些朋友有所参考，那就再好不过。</p>
+
+<p>本文介绍的主要是逆向的第一步，对想要逆向的ipa文件砸壳（去掉外层的加密保护）。</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://sumbrilliance.github.io/2016/05/%E9%80%9A%E8%BF%87%E6%95%B0%E6%8D%AE%E7%BA%BF%E7%9B%B4%E6%8E%A5ssh%E7%99%BB%E9%99%86%E5%88%B0ios%E8%AE%BE%E5%A4%87/">
+                <h3 class="media-heading">通过数据线直接ssh登陆到iOS设备</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>小黄书《iOS逆向工程》介绍的使用usb连接 iOS设备的方式是使用 usbmuxd，但是这个方式还是不够快速便捷，本文介绍了几种更方便的连接思路。</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://sumbrilliance.github.io/2016/02/float-%E5%9C%A8%E5%86%85%E5%AD%98%E4%B8%AD%E7%9A%84%E8%A1%A8%E7%A4%BA/">
+                <h3 class="media-heading">float 在内存中的表示</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>从学c语言就一直都知道浮点数有单精度双精度，后者精度较高，使用64位存储，前者使用32位。然而没有进一步了解过。这次看计算机专业导论，介绍了浮点数的内部存储规则，总结记录一下.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero="no post found"
+         data-message-one="1 post found"
+         data-message-other="{n} posts found">
+         5 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://sumbrilliance.github.io/images/cover.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="https://sumbrilliance.github.io/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+<script lang="javascript">
+window.onload = updateMinWidth;
+window.onresize = updateMinWidth;
+document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
+function updateMinWidth() {
+  var sidebar = document.getElementById("sidebar");
+  var main = document.getElementById("main");
+  main.style.minWidth = "";
+  var w1 = getComputedStyle(main).getPropertyValue("min-width");
+  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
+  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
+  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
+}
+</script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/sumbrilliance.github.io\/2017\/04\/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6\/';
+          
+            this.page.identifier = '\/2017\/04\/entitlements%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'sumbrilliance';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+    
+  </body>
+</html>
+
