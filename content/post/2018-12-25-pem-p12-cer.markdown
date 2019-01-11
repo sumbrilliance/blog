@@ -1,5 +1,4 @@
 ---
-layout:     post
 title:      ".pem、 .p12、cer 等文件的区别"
 subtitle:   ""
 date:       2018-12-25 22:30:00

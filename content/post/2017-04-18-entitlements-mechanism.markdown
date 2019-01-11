@@ -19,15 +19,13 @@ tags:
 
 <!--more-->
 
-原来的素材图放在七牛云可能因为很久没有登上去处理上面的图片，无法查看无法下载，也是坑。中间又经历过重装系统，原图也丢失了，有兴趣的朋友可以通过下文流程图出处找
-
 ## 一、entitlements 验证流程
 
 ### 1.1 entitlements流程图
 
-![流程图](http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-0.png)
+![流程图](https://blog-1252872972.cos.ap-chengdu.myqcloud.com/Entitlements-0.png)
 如图所示，entitlements.plist和pp文件都是entitlements这一授权机制的体现，两者彼此分工又互相配合。前者主管app在沙盒中的权限，而pp文件既管理沙盒权限，也管理允许运行的设备号，验证签名的证书是否有效等等。
-![启动验证流程](http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-1.png)
+![启动验证流程](https://blog-1252872972.cos.ap-chengdu.myqcloud.com/Entitlements-1.png)
 
 ### 1.2 app的entitlements会在程序安装和启动时进行验证
 分为两步：
@@ -42,11 +40,11 @@ tags:
 ## 二、查看entitlements的方法
 
 ### 2.1 直接查看
-![常看entitlements文件](http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-2.png)
+![常看entitlements文件](https://blog-1252872972.cos.ap-chengdu.myqcloud.com/Entitlements-2.png)
 但是这个entitlements文件所列的权限不全，有些不会列出来。比如application-identifier,keychain-access-groups这些。
 
 ### 2.2 打包时查看。
-![Archive时查看entitlements](http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-4.png)
+![Archive时查看entitlements](https://blog-1252872972.cos.ap-chengdu.myqcloud.com/Entitlements-4.png)
 在这里可以看到我们将要打包的app的所有权限，我们可以检查是否有遗漏，比如说推送的权限，后台播放的权限。
 
 ### 2.3 codesign 命令行工具查看
@@ -63,7 +61,7 @@ tags:
 >security cms -D -i /path/XXXXX.mobileprovision
 
 ### 2.6 进到xxx.app里面，用vim打开里面的embedded.mobileprovision，文件，往下翻到entitlements目录
-![mobileprovision中的entitlments示意](http://7xqjl4.com1.z0.glb.clouddn.com/Entitlements-3.png)
+![mobileprovision中的entitlments示意](https://blog-1252872972.cos.ap-chengdu.myqcloud.com/Entitlements-3.png)
 
 ## 三、生成entitlements.plist文件
 这里介绍一个技巧快速生成entitlements.plist文件，使用codesign工具：
