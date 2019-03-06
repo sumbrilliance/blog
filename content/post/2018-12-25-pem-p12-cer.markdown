@@ -1,16 +1,14 @@
 ---
-title:      ".pem、 .p12、cer 等文件的区别"
-subtitle:   ""
-date:       2018-12-25 22:30:00
-author:     "sumbrilliance"
-coverImage: //d1u9biwaxjngwg.cloudfront.net/video-integration-showcase/peak-140.jpg
-thumbnailImage: //d1u9biwaxjngwg.cloudfront.net/video-integration-showcase/peak-140.jpg
+title: ".pem、 .p12、cer 等文件的区别"
+date:  2018-12-25
+coverImage: https://d1u9biwaxjngwg.cloudfront.net/video-integration-showcase/peak-140.jpg
+thumbnailImage: https://d1u9biwaxjngwg.cloudfront.net/video-integration-showcase/peak-140.jpg
 thumbnailImagePosition: "left"
 categories:
 - 基础
 tags:
-    - 其他
-    - 证书
+- 其他
+- 证书
 ---
 本文根据SO上面的一个的回答，对CSR 、pem、crt、cer等文件格式进行解释。
 

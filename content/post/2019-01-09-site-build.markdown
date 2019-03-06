@@ -17,17 +17,20 @@ tags:
 
 <!--more-->
 
-生成静态文件
+<!-- toc -->
 
-### 1.执行命令 
+
+# 1.生成静态文件
+
+执行命令 
 
 > hugo -t hugo-tranquilpeak-theme
 
-![image-20190110001535959](/Users/sumbrilliance/Library/Application Support/typora-user-images/image-20190110001535959.png)
+![image-20190110001535959](https://blog-1252872972.cos.ap-chengdu.myqcloud.com/image-20190110001535959.png)
 
-生成静态文件到 public，如果所示：![site-public](/Users/sumbrilliance/Pictures/site-public.png)
+生成静态文件到 public，如果所示：![site-public](https://blog-1252872972.cos.ap-chengdu.myqcloud.com/site-public.png)
 
-### 2.将生成的静态文件，push到博客仓库中
+# 2.将生成的静态文件，push到博客仓库中
 
 先进入 submodules，即 git 的子模块
 
@@ -35,7 +38,7 @@ tags:
 
 因为之前我们给 blog 仓库添加子模块，blog的public目录关联的是 sumbrilliance.github.io.git 这个仓库地址，所以我们进入到public后，进行的操作其实是针对 sumbrilliance.github.io 这个仓库的。现在我们进到 public 目录，push到 关联仓库中。
 
-![site-push1](/Users/sumbrilliance/Pictures/site-push1.png)
+![site-push1](https://blog-1252872972.cos.ap-chengdu.myqcloud.com/site-push1.png)
 
 > git commit -m 'ref to blog repository'
 >
