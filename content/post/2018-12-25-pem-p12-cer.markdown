@@ -1,5 +1,5 @@
 ---
-title: ".pem、 .p12、cer 等文件的区别"
+title: "pem、 .p12、cer、pkcs 等文件的区别"
 date:  2018-12-25
 coverImage: https://d1u9biwaxjngwg.cloudfront.net/video-integration-showcase/peak-140.jpg
 thumbnailImage: https://d1u9biwaxjngwg.cloudfront.net/video-integration-showcase/peak-140.jpg
