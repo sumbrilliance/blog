@@ -22,27 +22,6 @@ tags:
 
 usbmuxd 这个三方库也可以很快的通过usb线ssh连接iOS设备，还有更便捷的方法可以做到。不用输入tcprelay.py的路径，连接手机，快速登录。即守护进程开机运行，直接转发ssh的默认端口号22到其他端口，并加载[intl程序](https://code.google.com/archive/p/iphonetunnel-usbmuxconnectbyport/downloads)监听连接。
 
-title: "Welcome to Tranquilpeak 0.4.4-BETA"
-date: 2015-06-15
-categories:
-- tranquilpeak
-- releases
-  tags:
-- hexo theme
-- responsive
-- gravatar
-- disqus
-- google analytics
-  keywords:
-- disqus
-- google
-- gravatar
-  autoThumbnailImage: false
-  thumbnailImagePosition: "top"
-  thumbnailImage: //d1u9biwaxjngwg.cloudfront.net/welcome-to-tranquilpeak/city-750.jpg
-  coverImage: //d1u9biwaxjngwg.cloudfront.net/welcome-to-tranquilpeak/city.jpg
-  metaAlignment: center
-
 ## 自动运行监听程序
 在 ~/Library/Application Support/ 目录下新建文件夹，放置监听程序(itnl和libmd.dylib)
 然后在~/Library/LaunchAgents 下放置一个plist文件(我的起名为com.sumbrilliance.tcprelay.plist)，格式按照如下格式：

@@ -1,4 +1,5 @@
 theme = "maupassant"
+#theme  = "ananke"
 baseURL = "https://summer4.dev"
 languageCode = "zh-CN"
 title = "夏四的博客"
@@ -15,7 +16,7 @@ paginatePath = "page"
   favicon = "https://blog-1252872972.cos.ap-chengdu.myqcloud.com/avatar-face.jpg"
   email = "uyhhi1ss@gmail.com"
 [params]
-  subtitle = "曾经的iOS开发、现Go语言(golang)程序员"
+  subtitle = "打杂开发/Go语言(golang)程序员"
   keywords = "golang,杂谈,学习笔记,感悟,心得"
   description = "个人博客站点，记录个人的学习笔记，项目中遇到的问题，解决方案，想法杂谈"
   busuanzi = true
